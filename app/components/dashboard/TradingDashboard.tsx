@@ -11,7 +11,6 @@ import { SYMBOLS } from "@/app/lib/constants";
 import { usePriceHistory } from "@/app/hooks/use-market-data";
 import { PriceAlerts } from "@/app/components/alerts/PriceAlerts";
 import { CandlestickChart } from "@/app/components/charts/CandlestickChart";
-import { useTheme } from "@/app/hooks/use-theme";
 
 export const TradingDashboard: React.FC = () => {
   const {
@@ -22,7 +21,6 @@ export const TradingDashboard: React.FC = () => {
     timeInterval,
   } = useMarketStore();
 
-  const { theme } = useTheme();
 
   const { data: priceHistory, isLoading: isChartLoading } = usePriceHistory(
     selectedSymbol,
