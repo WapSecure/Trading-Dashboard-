@@ -32,6 +32,7 @@ export function WebSocketProvider({
 }: WebSocketProviderProps) {
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 8;
   const [isBrowser, setIsBrowser] = useState(false);
@@ -40,6 +41,23 @@ export function WebSocketProvider({
 
   useEffect(() => {
     setIsBrowser(true);
+  }, []);
+
+  const setupHeartbeat = useCallback(() => {
+    if (heartbeatInterval.current) {
+      clearInterval(heartbeatInterval.current);
+    }
+
+    heartbeatInterval.current = setInterval(() => {
+      if (ws.current?.readyState === WebSocket.OPEN) {
+        try {
+          ws.current.send(JSON.stringify({ type: 'ping' }));
+        } catch (error) {
+          console.log('Heartbeat failed, reconnecting...');
+          attemptReconnect();
+        }
+      }
+    }, 30000);
   }, []);
 
   const connect = useCallback(() => {
@@ -53,10 +71,9 @@ export function WebSocketProvider({
       if (ws.current) {
         ws.current.close();
       }
+
       const endpoints = [
         "wss://ws.coincap.io/prices?assets=bitcoin,ethereum,cardano,polkadot,solana",
-        "wss://stream.binance.com:9443/ws/btcusdt@ticker/ethusdt@ticker/adausdt@ticker/dotusdt@ticker/solusdt@ticker",
-        "wss://fstream.binance.com/ws/btcusdt@ticker/ethusdt@ticker/adausdt@ticker/dotusdt@ticker/solusdt@ticker",
       ];
 
       const endpoint = endpoints[0];
@@ -66,6 +83,7 @@ export function WebSocketProvider({
       ws.current.onopen = () => {
         setConnectionStatus("connected");
         reconnectAttempts.current = 0;
+        setupHeartbeat();
       };
 
       ws.current.onmessage = (event) => {
@@ -122,6 +140,11 @@ export function WebSocketProvider({
       ws.current.onclose = (event) => {
         setConnectionStatus("disconnected");
 
+        if (heartbeatInterval.current) {
+          clearInterval(heartbeatInterval.current);
+          heartbeatInterval.current = null;
+        }
+
         if (event.code !== 1000 && event.code !== 1001) {
           attemptReconnect();
         }
@@ -140,7 +163,7 @@ export function WebSocketProvider({
       setConnectionStatus("error");
       attemptReconnect();
     }
-  }, [isBrowser, setConnectionStatus, updateTicker]);
+  }, [isBrowser, setConnectionStatus, updateTicker, setupHeartbeat]);
 
   const attemptReconnect = useCallback(() => {
     if (reconnectAttempts.current < maxReconnectAttempts) {
@@ -159,6 +182,7 @@ export function WebSocketProvider({
   }, [connect]);
 
   const initializeFallbackData = useCallback(() => {
+    
     symbols.forEach(async (symbol) => {
       try {
         const response = await fetch(`/api/ticker?symbol=${symbol}`);
@@ -175,100 +199,28 @@ export function WebSocketProvider({
             low: parseFloat(data.lowPrice),
             lastUpdate: new Date(),
           });
+
         } else {
           throw new Error(`API responded with status: ${response.status}`);
         }
       } catch (error) {
         console.error(`Failed to fetch ${symbol} data:`, error);
-        initializeMockData();
       }
     });
-  }, [symbols, updateTicker]);
-
-  const initializeMockData = useCallback(() => {
-    const mockTickers = {
-      BTCUSDT: {
-        price: 45123.45,
-        change: 234.56,
-        changePercent: 0.52,
-        volume: 2850000000,
-        high: 45500.0,
-        low: 44800.0,
-      },
-      ETHUSDT: {
-        price: 2432.18,
-        change: 45.67,
-        changePercent: 1.91,
-        volume: 1350000000,
-        high: 2450.0,
-        low: 2400.0,
-      },
-      ADAUSDT: {
-        price: 0.4567,
-        change: 0.0234,
-        changePercent: 5.41,
-        volume: 450000000,
-        high: 0.46,
-        low: 0.44,
-      },
-      DOTUSDT: {
-        price: 7.2345,
-        change: 0.1234,
-        changePercent: 1.74,
-        volume: 180000000,
-        high: 7.3,
-        low: 7.1,
-      },
-      SOLUSDT: {
-        price: 98.765,
-        change: 2.345,
-        changePercent: 2.43,
-        volume: 950000000,
-        high: 100.0,
-        low: 96.0,
-      },
-    };
-
-    symbols.forEach((symbol) => {
-      if (mockTickers[symbol as keyof typeof mockTickers]) {
-        const mockData = mockTickers[symbol as keyof typeof mockTickers];
-        updateTicker(symbol, {
-          ...mockData,
-          lastUpdate: new Date(),
-        });
-      }
-    });
-
-    const interval = setInterval(() => {
-      symbols.forEach((symbol) => {
-        if (mockTickers[symbol as keyof typeof mockTickers]) {
-          const current = useMarketStore.getState().getTicker(symbol);
-          if (current) {
-            const randomChange = (Math.random() - 0.5) * current.price * 0.002; // ±0.1%
-            const newPrice = current.price + randomChange;
-            const basePrice = current.price - current.change;
-            const change = newPrice - basePrice;
-            const changePercent = (change / basePrice) * 100;
-
-            updateTicker(symbol, {
-              price: newPrice,
-              change: change,
-              changePercent: changePercent,
-              lastUpdate: new Date(),
-            });
-          }
-        }
-      });
-    }, 3000);
-
-    return () => clearInterval(interval);
   }, [symbols, updateTicker]);
 
   const disconnect = useCallback(() => {
+    
     if (reconnectTimeout.current) {
       clearTimeout(reconnectTimeout.current);
       reconnectTimeout.current = null;
     }
+    
+    if (heartbeatInterval.current) {
+      clearInterval(heartbeatInterval.current);
+      heartbeatInterval.current = null;
+    }
+    
     if (ws.current) {
       ws.current.close(1000, "Component unmounting");
     }
@@ -291,7 +243,7 @@ export function WebSocketProvider({
         if (currentStatus !== "connected") {
           initializeFallbackData();
         }
-      }, 1000);
+      }, 3000);
 
       return () => clearTimeout(timeout);
     }

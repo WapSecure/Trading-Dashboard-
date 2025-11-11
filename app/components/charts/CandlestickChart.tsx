@@ -42,7 +42,6 @@ export const CandlestickChart = memo(
       try {
         return data.map((item) => ({
           ...item,
-          // Ensure timestamp is a Date object
           timestamp: safeDateConversion(item.timestamp),
           formattedTime: formatTime(
             safeDateConversion(item.timestamp),
@@ -103,14 +102,16 @@ export const CandlestickChart = memo(
 
     if (data.length === 0) {
       return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white text-center sm:text-left">
               Candlestick Chart - {selectedSymbol.replace("USDT", "")}
             </h2>
-            <TimeIntervalSelector />
+            <div className="w-full sm:w-auto">
+              <TimeIntervalSelector />
+            </div>
           </div>
-          <div className="h-80 flex items-center justify-center text-gray-500 dark:text-gray-400">
+          <div className="h-64 sm:h-80 flex items-center justify-center text-gray-500 dark:text-gray-400">
             <div className="animate-pulse flex space-x-2">
               <div className="w-3 h-3 bg-gray-300 rounded-full animate-bounce"></div>
               <div className="w-3 h-3 bg-gray-300 rounded-full animate-bounce delay-100"></div>
@@ -123,16 +124,26 @@ export const CandlestickChart = memo(
     }
 
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white text-center sm:text-left">
             Candlestick Chart - {selectedSymbol.replace("USDT", "")}
           </h2>
-          <TimeIntervalSelector />
+          <div className="w-full sm:w-auto">
+            <TimeIntervalSelector />
+          </div>
         </div>
-        <div className="h-80">
+        <div className="h-64 sm:h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData}>
+            <ComposedChart
+              data={chartData}
+              margin={{
+                top: 5,
+                right: 5,
+                left: 5,
+                bottom: 5,
+              }}
+            >
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="#374151"
@@ -142,18 +153,20 @@ export const CandlestickChart = memo(
                 dataKey="formattedTime"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#6B7280", fontSize: 12 }}
+                tick={{ fill: "#6B7280", fontSize: 10 }}
                 interval="preserveStartEnd"
+                height={30}
+                scale="point"
               />
               <YAxis
                 domain={["dataMin - 0.01", "dataMax + 0.01"]}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#6B7280", fontSize: 12 }}
+                tick={{ fill: "#6B7280", fontSize: 10 }}
                 tickFormatter={(value) => `$${value.toLocaleString()}`}
+                width={60}
               />
               <Tooltip content={<CustomTooltip />} />
-
               <Bar
                 dataKey="close"
                 fill="#8884d8"
@@ -176,8 +189,6 @@ function formatTime(timestamp: Date, interval: string): string {
       return timestamp.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
       });
     } else if (interval === "1h" || interval === "15m") {
       return timestamp.toLocaleTimeString("en-US", {
@@ -187,7 +198,6 @@ function formatTime(timestamp: Date, interval: string): string {
       });
     } else {
       return timestamp.toLocaleTimeString("en-US", {
-        hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
         hour12: false,
