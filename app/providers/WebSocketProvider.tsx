@@ -53,7 +53,6 @@ export function WebSocketProvider({
         try {
           ws.current.send(JSON.stringify({ type: 'ping' }));
         } catch (error) {
-          console.log('Heartbeat failed, reconnecting...');
           attemptReconnect();
         }
       }

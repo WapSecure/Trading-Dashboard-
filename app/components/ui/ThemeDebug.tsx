@@ -6,10 +6,6 @@ import { useEffect } from "react";
 export function ThemeDebug() {
   const { theme, toggleTheme } = useTheme();
 
-  useEffect(() => {
-    console.log("Theme changed to:", theme);
-    console.log("HTML has dark class:", document.documentElement.classList.contains("dark"));
-  }, [theme]);
 
   return (
     <div className="fixed bottom-4 left-4 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-4 shadow-lg">
