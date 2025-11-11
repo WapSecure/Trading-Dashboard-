@@ -21,7 +21,6 @@ export const TradingDashboard: React.FC = () => {
     timeInterval,
   } = useMarketStore();
 
-
   const { data: priceHistory, isLoading: isChartLoading } = usePriceHistory(
     selectedSymbol,
     timeInterval
@@ -53,10 +52,10 @@ export const TradingDashboard: React.FC = () => {
               Real-time cryptocurrency prices and trading data
             </p>
           </div>
-          {/* <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
             <ConnectionStatus status={connectionStatus} />
             <ThemeToggle />
-          </div> */}
+          </div>
         </div>
 
         <div className="hidden lg:block">
